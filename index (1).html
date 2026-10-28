@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LOE Document Submission</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f0f4f8; min-height: 100vh; padding-bottom: 60px; }
+header { background: #1a3a5c; color: white; padding: 24px 32px; }
+.eyebrow { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.65; margin-bottom: 6px; }
+header h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+header p { font-size: 13px; opacity: 0.8; line-height: 1.5; }
+.container { max-width: 740px; margin: 28px auto 0; padding: 0 16px; }
+.card { background: white; border-radius: 10px; padding: 22px 24px; margin-bottom: 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+.card h2 { font-size: 15px; font-weight: 700; color: #1a3a5c; margin-bottom: 16px; }
+
+/* ── Checklist panel ── */
+.checklist-panel { background: white; border-radius: 10px; margin-bottom: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); overflow: hidden; }
+.checklist-header { background: #1a3a5c; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
+.checklist-header h2 { color: white; font-size: 15px; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 10px; }
+.checklist-header h2 svg { flex-shrink: 0; }
+.checklist-header .toggle-hint { font-size: 12px; color: rgba(255,255,255,0.7); display: flex; align-items: center; gap: 6px; }
+.checklist-arrow { transition: transform 0.25s; }
+.checklist-arrow.open { transform: rotate(180deg); }
+.checklist-body { padding: 0 24px; max-height: 0; overflow: hidden; transition: max-height 0.35s ease, padding 0.25s; }
+.checklist-body.open { max-height: 1200px; padding: 20px 24px; }
+.checklist-table { width: 100%; border-collapse: collapse; }
+.checklist-table thead tr { background: #e8edf3; }
+.checklist-table thead th { font-size: 12px; font-weight: 700; color: #1a3a5c; text-transform: uppercase; letter-spacing: 0.07em; padding: 10px 14px; text-align: left; border-bottom: 2px solid #c5d0dd; }
+.checklist-table tbody tr { border-bottom: 1px solid #e5e7eb; }
+.checklist-table tbody tr:last-child { border-bottom: none; }
+.checklist-table tbody tr:hover { background: #f8fafc; }
+.checklist-table td { padding: 11px 14px; vertical-align: top; }
+.checklist-table td:first-child { width: 36px; text-align: center; padding-top: 13px; }
+.checklist-check { width: 18px; height: 18px; border: 2px solid #cbd5e1; border-radius: 4px; display: inline-block; background: white; }
+.checklist-text { font-size: 13px; color: #374151; line-height: 1.55; }
+.checklist-text strong { color: #1a3a5c; }
+.checklist-text .sub-items { margin-top: 6px; padding-left: 16px; }
+.checklist-text .sub-items li { font-size: 13px; color: #4b5563; margin-bottom: 3px; list-style: disc; }
+.checklist-category { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 8px; border-radius: 10px; margin-bottom: 4px; }
+.cat-screenshots { background: #dbeafe; color: #1e40af; }
+.cat-consent    { background: #dcfce7; color: #166534; }
+.cat-coq        { background: #fef3c7; color: #92400e; }
+.cat-sristc     { background: #f3e8ff; color: #6b21a8; }
+.checklist-note { margin-top: 14px; background: #f8fafc; border-left: 3px solid #1a3a5c; border-radius: 0 6px 6px 0; padding: 10px 14px; font-size: 12px; color: #4b5563; line-height: 1.6; }
+
+/* ── Form fields ── */
+.field-label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 5px; }
+.field-row { margin-bottom: 14px; }
+.text-input { width: 100%; padding: 9px 12px; border-radius: 7px; font-size: 14px; border: 1.5px solid #d1d5db; outline: none; font-family: inherit; }
+.text-input:focus { border-color: #1a3a5c; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.type-btns { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+.type-btn { padding: 8px 18px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; border: 2px solid #d1d5db; background: white; color: #374151; }
+.type-btn.active { border-color: #1a3a5c; background: #1a3a5c; color: white; }
+
+/* ── Document sections ── */
+.section-wrap { border-radius: 10px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); overflow: hidden; }
+.section-header { padding: 12px 20px; }
+.section-header h3 { color: white; font-size: 14px; font-weight: 700; margin: 0; }
+.section-body { padding: 16px 20px; background: white; }
+.doc-item { margin-bottom: 12px; padding: 13px 14px; border-radius: 8px; border: 1.5px solid #e5e7eb; background: #fafafa; }
+.doc-item.uploaded { border-color: #86efac; background: #f0fdf4; }
+.doc-item.missing  { border-color: #fca5a5; background: #fff5f5; }
+.doc-item p { font-size: 13px; color: #1f2937; line-height: 1.5; margin-bottom: 8px; }
+.req { color: #dc2626; margin-right: 3px; }
+.upload-btn-label { display: inline-block; padding: 6px 14px; border-radius: 6px; font-size: 12px; background: #1a3a5c; color: white; cursor: pointer; font-weight: 600; }
+.file-chip { font-size: 12px; background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 12px; display: inline-block; margin: 0 4px; }
+.remove-btn { font-size: 11px; color: #6b7280; background: none; border: none; cursor: pointer; text-decoration: underline; margin-left: 4px; }
+.missing-note { font-size: 12px; color: #dc2626; margin-left: 8px; display: none; }
+.uploaded-label { font-size: 12px; color: #16a34a; font-weight: 600; }
+.field-error { color: #dc2626; font-size: 12px; margin-top: 4px; display: none; }
+.sig-checkbox-row { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; padding: 9px 12px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 7px; margin-bottom: 10px; }
+.sig-checkbox-row input[type=checkbox] { width: 17px; height: 17px; cursor: pointer; margin-top: 1px; flex-shrink: 0; }
+.sig-checkbox-row span { font-size: 12.5px; color: #374151; font-weight: 600; line-height: 1.4; }
+.sig-missing-note { font-size: 12px; color: #dc2626; margin-top: -4px; margin-bottom: 8px; display: none; }
+.pdf-badge { display: inline-block; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 9px; border-radius: 10px; margin-left: 8px; }
+.pdf-badge-1 { background: #dbeafe; color: #1e40af; }
+.pdf-badge-2 { background: #fef3c7; color: #92400e; }
+.resume-banner { max-width: 740px; margin: 16px auto 0; padding: 0 16px; }
+.resume-card { background: #eff6ff; border: 1.5px solid #93c5fd; border-radius: 10px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.resume-card p { margin: 0; font-size: 13px; color: #1e40af; }
+.resume-btn-group { display: flex; gap: 8px; flex-shrink: 0; }
+.resume-btn { padding: 7px 16px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; border: none; }
+.resume-btn.primary { background: #1e40af; color: white; }
+.resume-btn.secondary { background: white; color: #6b7280; border: 1.5px solid #d1d5db; }
+.save-bar { position: sticky; bottom: 0; background: white; border-top: 1.5px solid #e5e7eb; padding: 12px 16px; margin: 0 -16px; box-shadow: 0 -2px 8px rgba(0,0,0,0.04); z-index: 20; }
+.save-bar-inner { max-width: 740px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.save-progress-btn { padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 700; background: white; color: #1a3a5c; border: 1.5px solid #1a3a5c; cursor: pointer; }
+.save-status { font-size: 12px; color: #16a34a; font-weight: 600; opacity: 0; transition: opacity 0.3s; }
+.save-status.show { opacity: 1; }
+.refile-note { font-size: 12px; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 6px 10px; margin-top: 6px; display: none; }
+.error-box { background: #fef2f2; border: 1.5px solid #fca5a5; border-radius: 10px; padding: 16px 20px; margin-bottom: 18px; display: none; }
+.error-box h4 { color: #991b1b; font-size: 14px; margin-bottom: 8px; }
+.error-box ul { padding-left: 18px; }
+.error-box li { font-size: 13px; color: #7f1d1d; margin-bottom: 3px; }
+.primary-btn { width: 100%; padding: 14px; border-radius: 10px; font-size: 15px; font-weight: 700; background: #1a3a5c; color: white; border: none; cursor: pointer; box-shadow: 0 2px 8px rgba(26,58,92,0.25); }
+.primary-btn:disabled { background: #9ca3af; cursor: not-allowed; box-shadow: none; }
+.hint { text-align: center; font-size: 12px; color: #9ca3af; margin-top: 10px; }
+.spinner { display: none; text-align: center; padding: 16px; color: #6b7280; font-size: 14px; }
+
+/* ── Review screen ── */
+.info-box { background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 10px; padding: 14px 18px; margin-bottom: 18px; font-size: 13px; color: #1e40af; line-height: 1.6; }
+.drive-box { background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; padding: 14px 18px; margin-bottom: 18px; font-size: 13px; color: #166534; }
+.send-btn { width: 100%; padding: 15px; border-radius: 10px; font-size: 15px; font-weight: 700; background: #16a34a; color: white; border: none; cursor: pointer; box-shadow: 0 2px 8px rgba(22,163,74,0.3); margin-bottom: 10px; }
+.dl-btn { width: 100%; padding: 13px; border-radius: 10px; font-size: 14px; font-weight: 700; background: #1a3a5c; color: white; border: none; cursor: pointer; margin-bottom: 10px; }
+.back-btn { padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); cursor: pointer; }
+.review-header-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+.filename-display { font-family: monospace; font-size: 14px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 14px; color: #1e40af; font-weight: 700; margin-bottom: 12px; word-break: break-all; }
+.step-badge { display: inline-block; background: #1a3a5c; color: white; border-radius: 50%; width: 22px; height: 22px; text-align: center; line-height: 22px; font-size: 12px; font-weight: 700; margin-right: 6px; }
+#review-screen { display: none; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════ FORM SCREEN ═══════════════════════ -->
+<div id="form-screen">
+  <header>
+    <div class="eyebrow">BC Offshore School Program</div>
+    <h1>Letter of Exemption — Document Submission</h1>
+    <p>Upload all required documents as PDFs. They will be merged into one file and sent to <strong>mouatschool@gmail.com</strong>.</p>
+  </header>
+
+  <div class="resume-banner" id="resume-banner" style="display:none">
+    <div class="resume-card">
+      <p>We found saved progress from a previous session for <strong id="resume-name-preview">this applicant</strong>. Restore it?</p>
+      <div class="resume-btn-group">
+        <button class="resume-btn primary" onclick="resumeSavedProgress()">Resume</button>
+        <button class="resume-btn secondary" onclick="dismissResumeBanner()">Start Fresh</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+
+    <!-- ── CHECKLIST PANEL ── -->
+    <div class="checklist-panel">
+      <div class="checklist-header" onclick="toggleChecklist()" id="checklist-toggle">
+        <h2>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          1st LOE Request — Required Documents Checklist
+        </h2>
+        <span class="toggle-hint">
+          Click to expand
+          <svg class="checklist-arrow open" id="checklist-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+        </span>
+      </div>
+      <div class="checklist-body open" id="checklist-body">
+        <table class="checklist-table">
+          <thead>
+            <tr>
+              <th style="width:36px"></th>
+              <th>Document Required for Submission</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="checklist-check"></span></td>
+              <td>
+                <span class="checklist-category cat-screenshots">Screenshots</span>
+                <div class="checklist-text">Screenshot of the <strong>COQ or SR-ISTC application start date</strong> from the TRB account page</div>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="checklist-check"></span></td>
+              <td>
+                <span class="checklist-category cat-screenshots">Screenshots</span>
+                <div class="checklist-text">Screenshot of the <strong>applicant's name and file number</strong> from the "Update Contact Information" page of the TRB account page</div>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="checklist-check"></span></td>
+              <td>
+                <span class="checklist-category cat-screenshots">Screenshots</span>
+                <div class="checklist-text">Screenshot of the <strong>entire list of the current outstanding Required Documents</strong> from the TRB account page</div>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="checklist-check"></span></td>
+              <td>
+                <span class="checklist-category cat-screenshots">Screenshots</span>
+                <div class="checklist-text">Screenshot of the <strong>entire list of most current "Received Documents"</strong> from the TRB account page, confirming the following three items are listed:
+                  <ul class="sub-items">
+                    <li>A signed <strong>Consent to a Criminal Record Check (CRC) – For working with children and/or vulnerable adults</strong> form</li>
+                    <li>Primary identification documents</li>
+                    <li>Secondary identification documents</li>
+                  </ul>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="checklist-check"></span></td>
+              <td>
+                <span class="checklist-category cat-consent">Consent</span>
+                <div class="checklist-text">A <strong>physically signed</strong> Teacher and Principal Consent for Storage and Access of Personal Information – BC Offshore School Program form <em>(e-signatures not accepted)</em></div>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="checklist-check"></span></td>
+              <td>
+                <span class="checklist-category cat-consent">Consent</span>
+                <div class="checklist-text">Verification that the <strong>Consent to a Criminal Record Check (CRC) – For working with children and/or vulnerable adults</strong> form was physically signed and uploaded to the applicant's account — upload a screenshot or confirmation PDF as evidence only. <em>No copy of this form is included in the final submission.</em></div>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="checklist-check"></span></td>
+              <td>
+                <span class="checklist-category cat-coq">COQ Applicant</span>
+                <div class="checklist-text">Confirmation that the applicant has <strong>completed a Teacher Education Program</strong></div>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="checklist-check"></span></td>
+              <td>
+                <span class="checklist-category cat-sristc">SR-ISTC Applicant</span>
+                <div class="checklist-text">A copy of the application form showing the <strong>subject category(ies)</strong> of the applicant's choice — or, if unavailable, a note listing the subject category(ies) requested in the application</div>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="checklist-check"></span></td>
+              <td>
+                <span class="checklist-category cat-sristc">SR-ISTC Applicant</span>
+                <div class="checklist-text"><strong>Proof of two years of teaching experience</strong> — a resume or letter from a former employer</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="checklist-note">
+          <strong>Note:</strong> All documents are merged into a single PDF per applicant, named per BC Offshore School Program convention, e.g. <strong>SG-LastName-FirstName-1a.pdf</strong>. The CRC verification upload is for confirmation purposes only and is not included in the merged submission.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── APPLICANT INFORMATION ── -->
+    <div class="card">
+      <h2>Applicant Information</h2>
+      <div class="two-col">
+        <div class="field-row">
+          <label class="field-label" for="first-name">First Name <span class="req">*</span></label>
+          <input class="text-input" type="text" id="first-name" placeholder="e.g. Jane">
+          <p class="field-error" id="err-first-name">First name is required.</p>
+        </div>
+        <div class="field-row">
+          <label class="field-label" for="last-name">Last Name <span class="req">*</span></label>
+          <input class="text-input" type="text" id="last-name" placeholder="e.g. Smith">
+          <p class="field-error" id="err-last-name">Last name is required.</p>
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="l-number">L Number <span class="req">*</span></label>
+        <input class="text-input" type="text" id="l-number" placeholder="e.g. L1234567" style="max-width:260px">
+        <p class="field-error" id="err-l-number">L Number is required.</p>
+      </div>
+      <div class="field-row" style="margin-bottom:0">
+        <label class="field-label">Certificate Type <span class="req">*</span></label>
+        <div class="type-btns">
+          <button class="type-btn" onclick="setType('coq',this)">COQ Applicant</button>
+          <button class="type-btn" onclick="setType('sr_istc',this)">SR-ISTC Applicant</button>
+          <button class="type-btn" onclick="setType('both',this)">Both COQ &amp; SR-ISTC</button>
+        </div>
+        <p class="field-error" id="err-type">Please select a certificate type.</p>
+      </div>
+    </div>
+
+    <!-- ── SCREENSHOTS ── -->
+    <div class="section-wrap">
+      <div class="section-header" style="background:#1a3a5c"><h3>TRB Account Screenshots</h3></div>
+      <div class="section-body">
+        <div class="doc-item" id="item-ss_start_date">
+          <p><span class="req">*</span>Screenshot — COQ or SR-ISTC application start date from the TRB account page<span class="pdf-badge pdf-badge-1">PDF 1</span></p>
+          <input type="file" accept=".pdf" multiple id="file-ss_start_date" style="display:none" onchange="fileChosen('ss_start_date',this)">
+          <label class="upload-btn-label" for="file-ss_start_date">Upload PDF</label>
+          <span class="missing-note" id="miss-ss_start_date">Required</span>
+          <div id="up-ss_start_date" style="display:none;margin-top:6px"></div>
+        </div>
+        <div class="doc-item" id="item-ss_name_file">
+          <p><span class="req">*</span>Screenshot — Applicant name and file number from the Update Contact Information page of the TRB account page<span class="pdf-badge pdf-badge-1">PDF 1</span></p>
+          <input type="file" accept=".pdf" multiple id="file-ss_name_file" style="display:none" onchange="fileChosen('ss_name_file',this)">
+          <label class="upload-btn-label" for="file-ss_name_file">Upload PDF</label>
+          <span class="missing-note" id="miss-ss_name_file">Required</span>
+          <div id="up-ss_name_file" style="display:none;margin-top:6px"></div>
+        </div>
+        <div class="doc-item" id="item-ss_required_docs">
+          <p><span class="req">*</span>Screenshot — Entire list of the current outstanding Required Documents from the TRB account page<span class="pdf-badge pdf-badge-1">PDF 1</span></p>
+          <input type="file" accept=".pdf" multiple id="file-ss_required_docs" style="display:none" onchange="fileChosen('ss_required_docs',this)">
+          <label class="upload-btn-label" for="file-ss_required_docs">Upload PDF</label>
+          <span class="missing-note" id="miss-ss_required_docs">Required</span>
+          <div id="up-ss_required_docs" style="display:none;margin-top:6px"></div>
+        </div>
+        <div class="doc-item" id="item-ss_received_docs">
+          <p><span class="req">*</span>Screenshot — Entire list of most current Received Documents from TRB account page (must confirm: signed CRC form, primary ID, secondary ID)<span class="pdf-badge pdf-badge-1">PDF 1</span></p>
+          <input type="file" accept=".pdf" multiple id="file-ss_received_docs" style="display:none" onchange="fileChosen('ss_received_docs',this)">
+          <label class="upload-btn-label" for="file-ss_received_docs">Upload PDF</label>
+          <span class="missing-note" id="miss-ss_received_docs">Required</span>
+          <div id="up-ss_received_docs" style="display:none;margin-top:6px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CONSENT ── -->
+    <div class="section-wrap">
+      <div class="section-header" style="background:#2d6a4f"><h3>Consent Forms <span style="font-weight:400;opacity:0.85">— must be physically signed</span></h3></div>
+      <div class="section-body">
+
+        <div class="doc-item" id="item-consent_form">
+          <p><span class="req">*</span>Signed Teacher and Principal Consent for Storage and Access of Personal Information — BC Offshore School Program form<span class="pdf-badge pdf-badge-1">PDF 1</span></p>
+          <label class="sig-checkbox-row">
+            <input type="checkbox" id="sig-consent_form" onchange="sigToggled('consent_form',this)">
+            <span>I confirm this form was physically signed (wet signature) and the signed copy is being uploaded. E-signatures are not accepted.</span>
+          </label>
+          <p class="sig-missing-note" id="sig-miss-consent_form">Please confirm physical signature before uploading.</p>
+          <input type="file" accept=".pdf" multiple id="file-consent_form" style="display:none" onchange="fileChosen('consent_form',this)" disabled>
+          <label class="upload-btn-label" for="file-consent_form" id="label-consent_form" style="opacity:0.5;cursor:not-allowed">Upload PDF</label>
+          <span class="missing-note" id="miss-consent_form">Required</span>
+          <div id="up-consent_form" style="display:none;margin-top:6px"></div>
+        </div>
+
+        <div class="doc-item" id="item-crc_form">
+          <p><span class="req">*</span>Verification that the Consent to a Criminal Record Check (CRC) — For working with children and/or vulnerable adults form was physically signed and uploaded to the applicant's account</p>
+          <p style="font-size:12px;color:#6b7280;margin-bottom:8px">Upload a screenshot or confirmation PDF as evidence only. <strong>No copy of this form will be included in the final merged submission.</strong></p>
+          <label class="sig-checkbox-row">
+            <input type="checkbox" id="sig-crc_form" onchange="sigToggled('crc_form',this)">
+            <span>I confirm the CRC form was physically signed (wet signature) and uploaded to the applicant's account. E-signatures are not accepted.</span>
+          </label>
+          <p class="sig-missing-note" id="sig-miss-crc_form">Please confirm the CRC form was signed and uploaded before continuing.</p>
+          <input type="file" accept=".pdf" multiple id="file-crc_form" style="display:none" onchange="fileChosen('crc_form',this)" disabled>
+          <label class="upload-btn-label" for="file-crc_form" id="label-crc_form" style="opacity:0.5;cursor:not-allowed">Upload Verification PDF</label>
+          <span class="missing-note" id="miss-crc_form">Required</span>
+          <div id="up-crc_form" style="display:none;margin-top:6px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── COQ ── -->
+    <div class="section-wrap" id="sec-coq" style="display:none">
+      <div class="section-header" style="background:#7b3f00"><h3>COQ Applicant Documents</h3></div>
+      <div class="section-body">
+        <div class="doc-item" id="item-coq_teacher_ed">
+          <p><span class="req">*</span>COQ applicant — Confirmation that the applicant has completed a Teacher Education Program<span class="pdf-badge pdf-badge-1">PDF 1</span></p>
+          <input type="file" accept=".pdf" multiple id="file-coq_teacher_ed" style="display:none" onchange="fileChosen('coq_teacher_ed',this)">
+          <label class="upload-btn-label" for="file-coq_teacher_ed">Upload PDF</label>
+          <span class="missing-note" id="miss-coq_teacher_ed">Required</span>
+          <div id="up-coq_teacher_ed" style="display:none;margin-top:6px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SR-ISTC ── -->
+    <div class="section-wrap" id="sec-sr_istc" style="display:none">
+      <div class="section-header" style="background:#4a1942"><h3>SR-ISTC Applicant Documents</h3></div>
+      <div class="section-body">
+        <div class="doc-item" id="item-sr_app_form">
+          <p><span class="req">*</span>SR-ISTC applicant — Copy of application form showing subject category(ies), or a note listing the subject categories requested<span class="pdf-badge pdf-badge-1">PDF 1</span></p>
+          <input type="file" accept=".pdf" multiple id="file-sr_app_form" style="display:none" onchange="fileChosen('sr_app_form',this)">
+          <label class="upload-btn-label" for="file-sr_app_form">Upload PDF</label>
+          <span class="missing-note" id="miss-sr_app_form">Required</span>
+          <div id="up-sr_app_form" style="display:none;margin-top:6px"></div>
+        </div>
+        <div class="doc-item" id="item-sr_experience">
+          <p><span class="req">*</span>SR-ISTC applicant — Proof of two years of teaching experience (resume or letter from a former employer)<span class="pdf-badge pdf-badge-1">PDF 1</span></p>
+          <input type="file" accept=".pdf" multiple id="file-sr_experience" style="display:none" onchange="fileChosen('sr_experience',this)">
+          <label class="upload-btn-label" for="file-sr_experience">Upload PDF</label>
+          <span class="missing-note" id="miss-sr_experience">Required</span>
+          <div id="up-sr_experience" style="display:none;margin-top:6px"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="error-box" id="error-box">
+      <h4>Cannot proceed — please fix the following:</h4>
+      <ul id="error-list"></ul>
+    </div>
+
+    <div class="spinner" id="spinner">&#9696; Merging PDFs, please wait...</div>
+    <button class="primary-btn" id="merge-btn" onclick="doMergeAndReview()">Merge Documents &amp; Review Submission</button>
+    <p class="hint">All required documents must be uploaded before you can proceed.</p>
+  </div>
+
+  <div class="save-bar">
+    <div class="save-bar-inner">
+      <button class="save-progress-btn" onclick="saveProgress()">&#128190; Save Progress</button>
+      <span class="save-status" id="save-status">&#10003; Progress saved on this device</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ REVIEW SCREEN ═══════════════════════ -->
+<div id="review-screen">
+  <header>
+    <div class="review-header-row">
+      <div>
+        <div class="eyebrow">BC Offshore School Program</div>
+        <h1>Review &amp; Send</h1>
+      </div>
+      <button class="back-btn" onclick="goBack()">&#8592; Back to Edit</button>
+    </div>
+  </header>
+  <div class="container">
+    <div class="info-box">
+      <strong>Two steps to send:</strong><br>
+      <span class="step-badge">1</span> Click <strong>Download Merged PDF</strong> — saves the file to your device.<br>
+      <span class="step-badge">2</span> Copy the email fields below and paste into your email system, attaching the downloaded PDF.
+    </div>
+
+    <div class="card">
+      <h2>Merged PDF Ready</h2>
+      <p style="font-size:13px;color:#6b7280;margin-bottom:8px">File name (BC Offshore naming convention):</p>
+      <div class="filename-display" id="filename-display"></div>
+      <button class="dl-btn" onclick="downloadPDF()">&#8595; Download Merged PDF</button>
+    </div>
+
+    <div class="card">
+      <h2>Email Preview</h2>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:12px">
+        <tr>
+          <td style="font-size:13px;font-weight:700;color:#6b7280;padding:5px 10px 5px 0;white-space:nowrap;vertical-align:top">To:</td>
+          <td style="font-size:13px;color:#1f2937;padding:5px 0">mouatschool@gmail.com</td>
+        </tr>
+        <tr>
+          <td style="font-size:13px;font-weight:700;color:#6b7280;padding:5px 10px 5px 0;white-space:nowrap;vertical-align:top">Subject:</td>
+          <td style="font-size:13px;color:#1f2937;padding:5px 0" id="rev-subject"></td>
+        </tr>
+      </table>
+      <p style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Body</p>
+      <pre id="rev-body" style="font-family:inherit;font-size:13px;color:#374151;white-space:pre-wrap;line-height:1.7;background:#f9fafb;padding:14px;border-radius:8px;border:1px solid #e5e7eb;max-height:340px;overflow-y:auto;margin:0"></pre>
+    </div>
+
+    <div style="background:white;border-radius:10px;padding:20px 24px;margin-bottom:18px;box-shadow:0 1px 4px rgba(0,0,0,0.08)">
+      <p style="font-size:14px;font-weight:700;color:#1a3a5c;margin-bottom:12px">Send Your Submission</p>
+      <p style="font-size:13px;color:#4b5563;margin-bottom:14px;line-height:1.6">
+        Copy each field below and paste into your email system to send.
+      </p>
+      <div style="margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <span style="font-size:12px;font-weight:700;color:#6b7280;width:60px">To:</span>
+          <code id="copy-to" style="flex:1;font-size:12px;background:#f1f5f9;padding:6px 10px;border-radius:5px;border:1px solid #e2e8f0">mouatschool@gmail.com</code>
+          <button onclick="copyText('copy-to','btn-to')" id="btn-to" style="padding:5px 12px;font-size:11px;font-weight:700;background:#e2e8f0;border:none;border-radius:5px;cursor:pointer;white-space:nowrap">Copy</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <span style="font-size:12px;font-weight:700;color:#6b7280;width:60px">Subject:</span>
+          <code id="copy-subject" style="flex:1;font-size:12px;background:#f1f5f9;padding:6px 10px;border-radius:5px;border:1px solid #e2e8f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></code>
+          <button onclick="copyText('copy-subject','btn-subject')" id="btn-subject" style="padding:5px 12px;font-size:11px;font-weight:700;background:#e2e8f0;border:none;border-radius:5px;cursor:pointer;white-space:nowrap">Copy</button>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:8px">
+          <span style="font-size:12px;font-weight:700;color:#6b7280;width:60px;padding-top:7px">Body:</span>
+          <textarea id="copy-body" readonly onclick="this.select()" style="flex:1;font-size:12px;background:#f1f5f9;padding:6px 10px;border-radius:5px;border:1px solid #e2e8f0;height:80px;resize:none;font-family:inherit;line-height:1.5"></textarea>
+          <button onclick="copyText('copy-body','btn-body')" id="btn-body" style="padding:5px 12px;font-size:11px;font-weight:700;background:#e2e8f0;border:none;border-radius:5px;cursor:pointer;white-space:nowrap">Copy</button>
+        </div>
+      </div>
+    </div>
+    <p class="hint">Remember to attach the downloaded PDF before sending.</p>
+  </div>
+</div>
+
+<script>
+var selectedType = '';
+var fileData = {};
+var mergedPdfBytes = null;
+var mergedFileName = '';
+
+
+var REQUIRED_BASE = ['ss_start_date','ss_name_file','ss_required_docs','ss_received_docs','consent_form','crc_form'];
+var LABELS = {
+  ss_start_date:    'Screenshot - COQ or SR-ISTC application start date (TRB account page)',
+  ss_name_file:     'Screenshot - Applicant name and file number (TRB Update Contact Information page)',
+  ss_required_docs: 'Screenshot - Entire list of current outstanding Required Documents (TRB account page)',
+  ss_received_docs: 'Screenshot - Entire Received Documents list (TRB account page)',
+  consent_form:     'Signed Teacher and Principal Consent for Storage and Access of Personal Information form',
+  crc_form:         'Signed Consent to a Criminal Record Check (CRC) form',
+  coq_teacher_ed:   'COQ - Confirmation of Teacher Education Program completion',
+  sr_app_form:      'SR-ISTC - Application form showing subject category(ies)',
+  sr_experience:    'SR-ISTC - Proof of two years of teaching experience'
+};
+
+
+function sigToggled(id, checkbox) {
+  var fileInput = document.getElementById('file-' + id);
+  var label     = document.getElementById('label-' + id);
+  var missNote  = document.getElementById('sig-miss-' + id);
+  if (checkbox.checked) {
+    fileInput.disabled = false;
+    label.style.opacity = '1';
+    label.style.cursor  = 'pointer';
+    missNote.style.display = 'none';
+  } else {
+    fileInput.disabled = true;
+    label.style.opacity = '0.5';
+    label.style.cursor  = 'not-allowed';
+    // If a file was already uploaded, remove it since the signature confirmation was unchecked
+    if (fileData[id] && fileData[id].length) { removeFile(id); }
+  }
+}
+
+function toggleChecklist() {
+  var body  = document.getElementById('checklist-body');
+  var arrow = document.getElementById('checklist-arrow');
+  var hint  = document.querySelector('.toggle-hint');
+  var isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  arrow.classList.toggle('open', !isOpen);
+  hint.childNodes[0].textContent = isOpen ? 'Click to expand' : 'Click to collapse';
+}
+
+function setType(type, btn) {
+  selectedType = type;
+  document.querySelectorAll('.type-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  document.getElementById('sec-coq').style.display     = (type==='coq'||type==='both')     ? 'block' : 'none';
+  document.getElementById('sec-sr_istc').style.display = (type==='sr_istc'||type==='both') ? 'block' : 'none';
+}
+
+function fileChosen(id, input) {
+  if (!input.files || input.files.length === 0) return;
+  var newFiles = Array.from(input.files);
+  if (!fileData[id]) fileData[id] = [];
+  fileData[id] = fileData[id].concat(newFiles);
+  input.value = '';
+
+  var item = document.getElementById('item-' + id);
+  item.classList.add('uploaded');
+  item.classList.remove('missing');
+  document.getElementById('miss-' + id).style.display = 'none';
+  renderFileList(id);
+}
+
+function renderFileList(id) {
+  var up = document.getElementById('up-' + id);
+  var files = fileData[id] || [];
+  if (files.length === 0) { up.style.display = 'none'; up.innerHTML = ''; return; }
+  up.style.display = 'block';
+  var chips = files.map(function(f, idx) {
+    return '<span class="file-chip">' + f.name + ' <button class="remove-btn" style="margin-left:2px;text-decoration:none" onclick="removeOneFile(\'' + id + '\',' + idx + ')">&times;</button></span>';
+  }).join(' ');
+  up.innerHTML = '<span class="uploaded-label">Attached (' + files.length + '): </span>' + chips
+    + '<br><button class="remove-btn" onclick="removeFile(\'' + id + '\')" style="margin-top:4px">Remove all</button>';
+}
+
+function removeOneFile(id, idx) {
+  if (!fileData[id]) return;
+  fileData[id].splice(idx, 1);
+  if (fileData[id].length === 0) { removeFile(id); } else { renderFileList(id); }
+}
+
+function removeFile(id) {
+  delete fileData[id];
+  var item = document.getElementById('item-' + id);
+  if (item) item.classList.remove('uploaded');
+  var up = document.getElementById('up-' + id);
+  up.style.display = 'none';
+  up.innerHTML = '';
+  document.getElementById('file-' + id).value = '';
+}
+
+function getRequired() {
+  var req = REQUIRED_BASE.slice();
+  if (selectedType==='coq'||selectedType==='both')     req.push('coq_teacher_ed');
+  if (selectedType==='sr_istc'||selectedType==='both') req.push('sr_app_form','sr_experience');
+  return req;
+}
+
+function buildFileName(suffix) {
+  var last  = document.getElementById('last-name').value.trim().replace(/\s+/g,'-');
+  var first = document.getElementById('first-name').value.trim().replace(/\s+/g,'-');
+  return 'SG-' + last + '-' + first + '-' + suffix + '.pdf';
+}
+
+function buildEmailBody(fileName, certLabel) {
+  var first = document.getElementById('first-name').value.trim();
+  var last  = document.getElementById('last-name').value.trim();
+  var lnum  = document.getElementById('l-number').value.trim();
+  var required = getRequired();
+
+  var lines = required.filter(function(id){ return id !== 'crc_form' && fileData[id] && fileData[id].length; })
+                      .map(function(id){
+                        var n = fileData[id].length;
+                        return '  - ' + LABELS[id] + (n > 1 ? ' (' + n + ' files)' : '');
+                      });
+  var crcVerified = fileData['crc_form'] && fileData['crc_form'].length;
+
+  return 'Dear Offshore School Representative,\n\n'
+    + 'Please find attached the merged LOE submission PDF for the following applicant:\n\n'
+    + 'Applicant Name: ' + first + ' ' + last + '\n'
+    + 'L Number: ' + lnum + '\n'
+    + 'Application Type: ' + certLabel + '\n'
+    + 'Attached File: ' + fileName + '\n\n'
+    + 'The merged PDF contains the following documents per the BC Offshore School Program LOE checklist:\n\n'
+    + lines.join('\n') + '\n\n'
+    + (crcVerified ? 'CRC Consent Form: Confirmed physically signed and uploaded to the applicant\'s account (verification on file; not included in merged submission).\n\n' : '')
+    + 'The Teacher and Principal Consent form was physically signed prior to upload.\n\n'
+    + 'All items on the Letter of Exemption Checklist have been verified and included.\n\n'
+    + 'Please file this submission in Google Drive under the folder: Saltus LOEs\n\n'
+    + 'Kindly confirm receipt at your earliest convenience.\n\n'
+    + 'Thank you,';
+}
+
+async function doMergeAndReview() {
+  var first    = document.getElementById('first-name').value.trim();
+  var last     = document.getElementById('last-name').value.trim();
+  var lnum     = document.getElementById('l-number').value.trim();
+  var required = getRequired();
+  var missing  = required.filter(function(id){ return !fileData[id] || fileData[id].length === 0; });
+  var errors   = [];
+
+  document.getElementById('err-first-name').style.display = first        ? 'none' : 'block';
+  document.getElementById('err-last-name').style.display  = last         ? 'none' : 'block';
+  document.getElementById('err-l-number').style.display   = lnum         ? 'none' : 'block';
+  document.getElementById('err-type').style.display       = selectedType ? 'none' : 'block';
+
+  if (!first)        errors.push('First name is required');
+  if (!last)         errors.push('Last name is required');
+  if (!lnum)         errors.push('L Number is required');
+  if (!selectedType) errors.push('Certificate type must be selected');
+
+  // Physical signature confirmation required for consent_form and crc_form
+  ['consent_form','crc_form'].forEach(function(id) {
+    var checked = document.getElementById('sig-' + id).checked;
+    if (!checked) {
+      errors.push('Please confirm physical signature for: ' + LABELS[id]);
+      document.getElementById('sig-miss-' + id).style.display = 'block';
+      document.getElementById('item-' + id).classList.add('missing');
+    }
+  });
+
+  missing.forEach(function(id) {
+    errors.push(LABELS[id]);
+    var item = document.getElementById('item-' + id);
+    if (item) {
+      item.classList.add('missing');
+      document.getElementById('miss-' + id).style.display = 'inline';
+    }
+  });
+
+  var errorBox = document.getElementById('error-box');
+  if (errors.length > 0) {
+    errorBox.style.display = 'block';
+    var list = document.getElementById('error-list');
+    list.innerHTML = '';
+    errors.forEach(function(e) { var li = document.createElement('li'); li.textContent = e; list.appendChild(li); });
+    errorBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    return;
+  }
+  errorBox.style.display = 'none';
+
+  var spinner  = document.getElementById('spinner');
+  var mergeBtn = document.getElementById('merge-btn');
+  spinner.style.display  = 'block';
+  mergeBtn.disabled = true;
+
+  try {
+    // Merge all required items except crc_form (which is verification only, not included in submission)
+    var mergeIds = required.filter(function(id){ return id !== 'crc_form' && fileData[id] && fileData[id].length; });
+    var merged = await PDFLib.PDFDocument.create();
+    for (var i = 0; i < mergeIds.length; i++) {
+      var filesForItem = fileData[mergeIds[i]];
+      for (var j = 0; j < filesForItem.length; j++) {
+        var arrayBuffer = await filesForItem[j].arrayBuffer();
+        var srcDoc = await PDFLib.PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
+        var pages  = await merged.copyPages(srcDoc, srcDoc.getPageIndices());
+        pages.forEach(function(p){ merged.addPage(p); });
+      }
+    }
+    mergedPdfBytes = await merged.save();
+    mergedFileName = buildFileName('1a');
+
+    var certLabel = selectedType==='coq' ? 'COQ' : selectedType==='sr_istc' ? 'SR-ISTC' : 'COQ and SR-ISTC';
+    var subject   = 'LOE Request - ' + first + ' ' + last + ' (' + lnum + ')';
+    var body      = buildEmailBody(mergedFileName, certLabel);
+
+    document.getElementById('filename-display').textContent = mergedFileName;
+    document.getElementById('rev-subject').textContent = subject;
+    document.getElementById('rev-body').textContent    = body;
+
+    spinner.style.display = 'none';
+    mergeBtn.disabled     = false;
+    document.getElementById('form-screen').style.display   = 'none';
+    document.getElementById('review-screen').style.display = 'block';
+    populateCopyFields();
+    window.scrollTo(0, 0);
+
+  } catch(err) {
+    spinner.style.display = 'none';
+    mergeBtn.disabled     = false;
+    alert('Error merging PDFs: ' + err.message + '\n\nPlease ensure all files are valid, non-password-protected PDFs.');
+  }
+}
+
+function downloadPDF() {
+  downloadBlob(mergedPdfBytes, mergedFileName);
+}
+
+function downloadBlob(bytes, filename) {
+  if (!bytes) return;
+  var blob = new Blob([bytes], { type: 'application/pdf' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href     = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+}
+
+function populateCopyFields() {
+  var subject = document.getElementById('rev-subject').textContent;
+  var body    = document.getElementById('rev-body').textContent;
+  document.getElementById('copy-subject').textContent = subject;
+  document.getElementById('copy-body').value = body;
+}
+
+
+function copyText(sourceId, btnId) {
+  var el = document.getElementById(sourceId);
+  var text = el.tagName === 'TEXTAREA' ? el.value : el.textContent;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() { flashBtn(btnId); }).catch(function() { fallbackCopy(el, btnId); });
+  } else {
+    fallbackCopy(el, btnId);
+  }
+}
+
+function fallbackCopy(el, btnId) {
+  if (el.tagName !== 'TEXTAREA') {
+    var ta = document.createElement('textarea');
+    ta.value = el.textContent;
+    ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  } else {
+    el.select();
+    document.execCommand('copy');
+  }
+  flashBtn(btnId);
+}
+
+function flashBtn(btnId) {
+  var btn = document.getElementById(btnId);
+  var orig = btn.textContent;
+  btn.textContent = 'Copied!';
+  btn.style.background = '#16a34a';
+  btn.style.color = 'white';
+  setTimeout(function() { btn.textContent = orig; btn.style.background = '#e2e8f0'; btn.style.color = ''; }, 2000);
+}
+
+function goBack() {
+  document.getElementById('review-screen').style.display = 'none';
+  document.getElementById('form-screen').style.display   = 'block';
+  window.scrollTo(0, 0);
+}
+
+// ─── SAVE / RESUME PROGRESS ──────────────────────────────────────────────────
+var STORAGE_KEY = 'loe_1st_request_progress';
+var ALL_ITEM_IDS = ['ss_start_date','ss_name_file','ss_required_docs','ss_received_docs','consent_form','crc_form','coq_teacher_ed','sr_app_form','sr_experience'];
+
+function saveProgress() {
+  var snapshot = {
+    firstName: document.getElementById('first-name').value,
+    lastName:  document.getElementById('last-name').value,
+    lNumber:   document.getElementById('l-number').value,
+    selectedType: selectedType,
+    sigConsent: document.getElementById('sig-consent_form').checked,
+    sigCrc:     document.getElementById('sig-crc_form').checked,
+    attachedItems: {},
+    savedAt: new Date().toISOString()
+  };
+  ALL_ITEM_IDS.forEach(function(id) {
+    if (fileData[id] && fileData[id].length) {
+      snapshot.attachedItems[id] = fileData[id].map(function(f){ return f.name; });
+    }
+  });
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
+    var status = document.getElementById('save-status');
+    status.classList.add('show');
+    setTimeout(function() { status.classList.remove('show'); }, 3000);
+  } catch (e) {
+    alert('Unable to save progress on this device: ' + e.message);
+  }
+}
+
+function checkForSavedProgress() {
+  var raw;
+  try { raw = localStorage.getItem(STORAGE_KEY); } catch (e) { return; }
+  if (!raw) return;
+  var data;
+  try { data = JSON.parse(raw); } catch (e) { return; }
+  if (!data) return;
+
+  var name = (data.firstName || '') + ' ' + (data.lastName || '');
+  document.getElementById('resume-name-preview').textContent = name.trim() || 'this applicant';
+  document.getElementById('resume-banner').style.display = 'block';
+  window._pendingResumeData = data;
+}
+
+function resumeSavedProgress() {
+  var data = window._pendingResumeData;
+  if (!data) return;
+
+  document.getElementById('first-name').value = data.firstName || '';
+  document.getElementById('last-name').value  = data.lastName  || '';
+  document.getElementById('l-number').value   = data.lNumber   || '';
+
+  if (data.selectedType) {
+    var btnMap = { coq: 0, sr_istc: 1, both: 2 };
+    var btns = document.querySelectorAll('.type-btn');
+    var idx = btnMap[data.selectedType];
+    if (btns[idx]) setType(data.selectedType, btns[idx]);
+  }
+
+  if (data.sigConsent) { document.getElementById('sig-consent_form').checked = true; sigToggled('consent_form', document.getElementById('sig-consent_form')); }
+  if (data.sigCrc)     { document.getElementById('sig-crc_form').checked = true;     sigToggled('crc_form', document.getElementById('sig-crc_form')); }
+
+  var attached = data.attachedItems || {};
+  Object.keys(attached).forEach(function(id) {
+    var item = document.getElementById('item-' + id);
+    var up   = document.getElementById('up-' + id);
+    if (!item || !up) return;
+    item.classList.add('uploaded');
+    var fileNames = attached[id];
+    var chips = fileNames.map(function(n){ return '<span class="file-chip">' + n + '</span>'; }).join(' ');
+    up.style.display = 'block';
+    up.innerHTML = '<span class="uploaded-label">Previously attached:</span> ' + chips
+      + '<div class="refile-note" style="display:block">&#9888; This file was attached in your last session but must be re-selected now — browsers don\'t allow saving file contents. Click Upload PDF and choose it again.</div>';
+  });
+
+  document.getElementById('resume-banner').style.display = 'none';
+}
+
+function dismissResumeBanner() {
+  document.getElementById('resume-banner').style.display = 'none';
+  try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+}
+
+document.addEventListener('DOMContentLoaded', checkForSavedProgress);
+</script>
+
+</body>
+</html>
